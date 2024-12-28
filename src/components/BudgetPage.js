@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+
+
 function BudgetPage() {
+  const [username, setUsername] = useState('');
   const navigate = useNavigate(); // kembali ke halaman buat akun
   const [budgets, setBudgets] = useState([]); // Menyimpan daftar anggaran
   const [expenses, setExpenses] = useState([]); // Menyimpan daftar pengeluaran
@@ -11,6 +14,13 @@ function BudgetPage() {
   const [selectedBudgetExpenses, setSelectedBudgetExpenses] = useState([]); // Pengeluaran terkait anggaran yang dipilih
   const [isDetailsVisible, setIsDetailsVisible] = useState(false); // Menentukan apakah rincian pengeluaran ditampilkan
 
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user'));
+    if (storedUser && storedUser.username) {
+      setUsername(storedUser.username); // Ambil nama pengguna dari localStorage
+    }
+  }, []);
+  
   useEffect(() => {
     // Mengambil data anggaran dan pengeluaran dari localStorage saat pertama kali render
     const savedBudgets = JSON.parse(localStorage.getItem('budgets')) || [];
@@ -54,12 +64,18 @@ function BudgetPage() {
         id: Date.now(),
         name: formState.budgetName,
         amount: parseFloat(formState.budgetAmount),
-        spent: 0
+        spent: 0,
       };
       const updatedBudgets = [...budgets, newBudget];
       setBudgets(updatedBudgets);
+
+      // Simpan ke localStorage setelah state budgets diperbarui
+      setTimeout(() => {
+        localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
+      }, 0);
+
+      // Reset form input
       setFormState({ ...formState, budgetName: '', budgetAmount: '' });
-      saveToLocalStorage();
     }
   };
 
@@ -97,22 +113,52 @@ function BudgetPage() {
   // Fungsi untuk menghapus item (anggaran atau pengeluaran)
   const deleteItem = (id, type) => {
     if (type === 'expense') {
-      const expenseToDelete = expenses.find(expense => expense.id === id);
-      setExpenses(expenses.filter(expense => expense.id !== id));
-      setBudgets(budgets.map(budget =>
+      const expenseToDelete = expenses.find((expense) => expense.id === id);
+  
+      // Perbarui expenses dan budgets
+      const updatedExpenses = expenses.filter((expense) => expense.id !== id);
+      const updatedBudgets = budgets.map((budget) =>
         budget.name === expenseToDelete.budget
           ? { ...budget, spent: budget.spent - expenseToDelete.amount }
           : budget
-      ));
-      setSelectedBudgetExpenses(selectedBudgetExpenses.filter(expense => expense.id !== id));
+      );
+  
+      setExpenses(updatedExpenses);
+      setBudgets(updatedBudgets);
+  
+      // Perbarui selectedBudgetExpenses
+      setSelectedBudgetExpenses(
+        selectedBudgetExpenses.filter((expense) => expense.id !== id)
+      );
+  
+      // Simpan langsung ke localStorage
+      localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
+      localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
     } else {
-      const budgetToDelete = budgets.find(budget => budget.id === id);
-      setExpenses(expenses.filter(expense => expense.budget !== budgetToDelete.name));
-      setBudgets(budgets.filter(budget => budget.id !== id));
-      setSelectedBudgetExpenses(selectedBudgetExpenses.filter(expense => expense.budget !== budgetToDelete.name));
+      const budgetToDelete = budgets.find((budget) => budget.id === id);
+  
+      // Perbarui budgets dan expenses
+      const updatedBudgets = budgets.filter((budget) => budget.id !== id);
+      const updatedExpenses = expenses.filter(
+        (expense) => expense.budget !== budgetToDelete.name
+      );
+  
+      setBudgets(updatedBudgets);
+      setExpenses(updatedExpenses);
+  
+      // Perbarui selectedBudgetExpenses
+      setSelectedBudgetExpenses(
+        selectedBudgetExpenses.filter(
+          (expense) => expense.budget !== budgetToDelete.name
+        )
+      );
+  
+      // Simpan langsung ke localStorage
+      localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
+      localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
     }
-    saveToLocalStorage();
   };
+  
 
   // Fungsi untuk menampilkan atau menyembunyikan rincian pengeluaran
   const toggleDetails = (budgetName) => {
@@ -170,7 +216,7 @@ function BudgetPage() {
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-4xl font-bold">Welcome back, <span className="text-blue-600">budgel!</span></h1>
+        <h1 className="text-4xl font-bold">Welcome back, <span className="text-blue-600">{username || 'Guest'}!</span></h1>
         <button
           onClick={resetData}
           className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
