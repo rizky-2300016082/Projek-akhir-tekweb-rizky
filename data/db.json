@@ -1,0 +1,17 @@
+{
+    "users": [
+      {
+        "id": 1,
+        "name": "John Doe"
+      }
+    ],
+    "budgets": [
+      {
+        "id": 1,
+        "name": "Travel Budget",
+        "amount": 1000,
+        "expenses": []
+      }
+    ]
+  }
+  
