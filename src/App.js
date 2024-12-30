@@ -8,16 +8,15 @@ import BudgetPage from './components/BudgetPage';
 
 function App() {
   return (
-    <Router>
+    <Router basename="/Projek-akhir-tekweb-rizky">
       <Navbar />
       <div className="p-4">
         <Routes>
-          <Route path="/" element={<CreateAccount />} />
+          <Route path="/" element={<CreateAccount />} /> {/* Halaman default */}
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/create-budget" element={<CreateBudget />} />
           <Route path="/budget" element={<BudgetPage />} />
-          <Route path="/" element={<BudgetPage />} />
-          <Route path="/create-account" element={<CreateAccount />} />
+          
         </Routes>
       </div>
     </Router>
