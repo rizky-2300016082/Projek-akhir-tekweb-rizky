@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/Projek-akhir-tekweb-rizky/static/css/main.2c676271.css",
-    "main.js": "/Projek-akhir-tekweb-rizky/static/js/main.e5db686f.js",
+    "main.js": "/Projek-akhir-tekweb-rizky/static/js/main.de9f4005.js",
     "static/js/488.2e77e64b.chunk.js": "/Projek-akhir-tekweb-rizky/static/js/488.2e77e64b.chunk.js",
     "index.html": "/Projek-akhir-tekweb-rizky/index.html",
     "main.2c676271.css.map": "/Projek-akhir-tekweb-rizky/static/css/main.2c676271.css.map",
-    "main.e5db686f.js.map": "/Projek-akhir-tekweb-rizky/static/js/main.e5db686f.js.map",
+    "main.de9f4005.js.map": "/Projek-akhir-tekweb-rizky/static/js/main.de9f4005.js.map",
     "488.2e77e64b.chunk.js.map": "/Projek-akhir-tekweb-rizky/static/js/488.2e77e64b.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.2c676271.css",
-    "static/js/main.e5db686f.js"
+    "static/js/main.de9f4005.js"
   ]
 }
