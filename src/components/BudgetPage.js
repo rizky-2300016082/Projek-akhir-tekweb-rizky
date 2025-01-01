@@ -54,7 +54,7 @@ function BudgetPage() {
     setIsDetailsVisible(false);
     localStorage.removeItem('budgets');
     localStorage.removeItem('expenses');
-    navigate('/create-account');
+    navigate('/');
   };
 
   // Fungsi untuk membuat anggaran baru
