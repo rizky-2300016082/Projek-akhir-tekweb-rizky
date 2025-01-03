@@ -1,85 +1,93 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-
-
 function BudgetPage() {
   const [username, setUsername] = useState('');
-  const navigate = useNavigate(); // kembali ke halaman buat akun
-  const [budgets, setBudgets] = useState([]); // Menyimpan daftar anggaran
-  const [expenses, setExpenses] = useState([]); // Menyimpan daftar pengeluaran
+  const navigate = useNavigate();
+  const [budgets, setBudgets] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [formState, setFormState] = useState({
-    budgetName: '', budgetAmount: '', expenseName: '', expenseAmount: '', selectedBudget: ''
-  }); // State untuk mengelola input formulir
-  const [selectedBudgetExpenses, setSelectedBudgetExpenses] = useState([]); // Pengeluaran terkait anggaran yang dipilih
-  const [isDetailsVisible, setIsDetailsVisible] = useState(false); // Menentukan apakah rincian pengeluaran ditampilkan
+    budgetName: '',
+    budgetAmount: '',
+    expenseName: '',
+    expenseAmount: '',
+    selectedBudget: ''
+  });
+  const [selectedBudgetExpenses, setSelectedBudgetExpenses] = useState([]);
+  const [isDetailsVisible, setIsDetailsVisible] = useState(false);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     if (storedUser && storedUser.username) {
-      setUsername(storedUser.username); // Ambil nama pengguna dari localStorage
+      setUsername(storedUser.username);
     }
-  }, []);
-  
-  useEffect(() => {
-    // Mengambil data anggaran dan pengeluaran dari localStorage saat pertama kali render
-    const savedBudgets = JSON.parse(localStorage.getItem('budgets')) || [];
-    const savedExpenses = JSON.parse(localStorage.getItem('expenses')) || [];
-    setBudgets(savedBudgets);
-    setExpenses(savedExpenses);
+
+    fetch('http://localhost:3001/api/budgets')
+      .then(response => response.json())
+      .then(data => setBudgets(data))
+      .catch(err => console.error('Error fetching budgets:', err));
+
+    fetch('http://localhost:3001/api/expenses')
+      .then(response => response.json())
+      .then(data => setExpenses(data))
+      .catch(err => console.error('Error fetching expenses:', err));
   }, []);
 
-  // Fungsi untuk menangani perubahan input form
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormState(prevState => ({ ...prevState, [name]: value }));
   };
 
-  // Fungsi untuk menyimpan data ke localStorage
-  const saveToLocalStorage = () => {
-    try {
-      localStorage.setItem('expenses', JSON.stringify(expenses));
-      localStorage.setItem('budgets', JSON.stringify(budgets));
-    } catch (error) {
-      console.error('Error saving to local storage:', error);
-    }
-  };
-
-  // Fungsi untuk mereset semua data
   const resetData = () => {
-    setBudgets([]);
-    setExpenses([]);
-    setFormState({ budgetName: '', budgetAmount: '', expenseName: '', expenseAmount: '', selectedBudget: '' });
-    setSelectedBudgetExpenses([]);
-    setIsDetailsVisible(false);
-    localStorage.removeItem('budgets');
-    localStorage.removeItem('expenses');
-    navigate('/');
+    Promise.all([
+      fetch('http://localhost:3001/api/budgets', { method: 'DELETE' }),
+      fetch('http://localhost:3001/api/expenses', { method: 'DELETE' })
+    ])
+      .then(responses => {
+        if (responses.every(response => response.ok)) {
+          setBudgets([]);
+          setExpenses([]);
+          setFormState({
+            budgetName: '',
+            budgetAmount: '',
+            expenseName: '',
+            expenseAmount: '',
+            selectedBudget: ''
+          });
+          setSelectedBudgetExpenses([]);
+          setIsDetailsVisible(false);
+          navigate('/');
+        } else {
+          console.error('Error resetting data:', responses);
+        }
+      })
+      .catch(err => console.error('Error during reset:', err));
   };
 
-  // Fungsi untuk membuat anggaran baru
   const createBudget = () => {
     if (formState.budgetName && formState.budgetAmount) {
       const newBudget = {
         id: Date.now(),
         name: formState.budgetName,
         amount: parseFloat(formState.budgetAmount),
-        spent: 0,
+        spent: 0
       };
-      const updatedBudgets = [...budgets, newBudget];
-      setBudgets(updatedBudgets);
 
-      // Simpan ke localStorage setelah state budgets diperbarui
-      setTimeout(() => {
-        localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
-      }, 0);
-
-      // Reset form input
-      setFormState({ ...formState, budgetName: '', budgetAmount: '' });
+      fetch('http://localhost:3001/api/budgets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newBudget)
+      })
+        .then(response => {
+          if (response.ok) {
+            setBudgets([...budgets, newBudget]);
+            setFormState({ ...formState, budgetName: '', budgetAmount: '' });
+          }
+        })
+        .catch(err => console.error('Error creating budget:', err));
     }
   };
 
-  // Fungsi untuk menambahkan pengeluaran baru
   const addExpense = () => {
     if (formState.expenseName && formState.expenseAmount && formState.selectedBudget) {
       const newExpense = {
@@ -89,128 +97,138 @@ function BudgetPage() {
         budget: formState.selectedBudget,
         date: new Date().toLocaleDateString('en-GB')
       };
-
-      const updatedExpenses = [...expenses, newExpense];
-      setExpenses(updatedExpenses);
-
-      // Memperbarui total pengeluaran pada anggaran yang dipilih
-      const updatedBudgets = budgets.map(budget =>
-        budget.name === formState.selectedBudget
-          ? { ...budget, spent: (budget.spent || 0) + newExpense.amount }
-          : budget
-      );
-      setBudgets(updatedBudgets);
-
-      if (formState.selectedBudget === newExpense.budget) {
-        setSelectedBudgetExpenses([...selectedBudgetExpenses, newExpense]);
-      }
-
-      setFormState({ ...formState, expenseName: '', expenseAmount: '' });
-      saveToLocalStorage();
+  
+      fetch('http://localhost:3001/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newExpense)
+      })
+        .then(response => {
+          if (response.ok) {
+            setExpenses(prevExpenses => [...prevExpenses, newExpense]);
+  
+            const updatedBudgets = budgets.map(budget =>
+              budget.name === formState.selectedBudget
+                ? { ...budget, spent: (budget.spent || 0) + newExpense.amount }
+                : budget
+            );
+            setBudgets(updatedBudgets);
+            setFormState({ ...formState, expenseName: '', expenseAmount: '' });
+          }
+        })
+        .catch(err => console.error('Error adding expense:', err));
     }
   };
+  
 
-  // Fungsi untuk menghapus item (anggaran atau pengeluaran)
   const deleteItem = (id, type) => {
-    if (type === 'expense') {
-      const expenseToDelete = expenses.find((expense) => expense.id === id);
-  
-      // Perbarui expenses dan budgets
-      const updatedExpenses = expenses.filter((expense) => expense.id !== id);
-      const updatedBudgets = budgets.map((budget) =>
-        budget.name === expenseToDelete.budget
-          ? { ...budget, spent: budget.spent - expenseToDelete.amount }
-          : budget
-      );
-  
-      setExpenses(updatedExpenses);
-      setBudgets(updatedBudgets);
-  
-      // Perbarui selectedBudgetExpenses
-      setSelectedBudgetExpenses(
-        selectedBudgetExpenses.filter((expense) => expense.id !== id)
-      );
-  
-      // Simpan langsung ke localStorage
-      localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
-      localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
-    } else {
-      const budgetToDelete = budgets.find((budget) => budget.id === id);
-  
-      // Perbarui budgets dan expenses
-      const updatedBudgets = budgets.filter((budget) => budget.id !== id);
-      const updatedExpenses = expenses.filter(
-        (expense) => expense.budget !== budgetToDelete.name
-      );
-  
-      setBudgets(updatedBudgets);
-      setExpenses(updatedExpenses);
-  
-      // Perbarui selectedBudgetExpenses
-      setSelectedBudgetExpenses(
-        selectedBudgetExpenses.filter(
-          (expense) => expense.budget !== budgetToDelete.name
-        )
-      );
-  
-      // Simpan langsung ke localStorage
-      localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
-      localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
-    }
-  };
-  
+    const endpoint = type === 'expense' ? 'expenses' : 'budgets';
 
-  // Fungsi untuk menampilkan atau menyembunyikan rincian pengeluaran
+    fetch(`http://localhost:3001/api/${endpoint}/${id}`, { method: 'DELETE' })
+      .then(response => {
+        if (response.ok) {
+          if (type === 'expense') {
+            const expenseToDelete = expenses.find(expense => expense.id === id);
+
+            const updatedExpenses = expenses.filter(expense => expense.id !== id);
+            const updatedBudgets = budgets.map(budget =>
+              budget.name === expenseToDelete.budget
+                ? { ...budget, spent: budget.spent - expenseToDelete.amount }
+                : budget
+            );
+
+            setExpenses(updatedExpenses);
+            setBudgets(updatedBudgets);
+            setSelectedBudgetExpenses(
+              selectedBudgetExpenses.filter(expense => expense.id !== id)
+            );
+          } else {
+            const budgetToDelete = budgets.find(budget => budget.id === id);
+
+            const updatedBudgets = budgets.filter(budget => budget.id !== id);
+            const updatedExpenses = expenses.filter(
+              expense => expense.budget !== budgetToDelete.name
+            );
+
+            setBudgets(updatedBudgets);
+            setExpenses(updatedExpenses);
+            setSelectedBudgetExpenses(
+              selectedBudgetExpenses.filter(
+                expense => expense.budget !== budgetToDelete.name
+              )
+            );
+          }
+        } else {
+          console.error(`Failed to delete ${type} with id ${id}`);
+        }
+      })
+      .catch(err => console.error(`Error deleting ${type}:`, err));
+  };
+
   const toggleDetails = (budgetName) => {
     if (formState.selectedBudget !== budgetName) {
       setFormState({ ...formState, selectedBudget: budgetName });
-      setSelectedBudgetExpenses(expenses.filter(expense => expense.budget === budgetName));
+
+      fetch(`http://localhost:3001/api/expenses?budget=${encodeURIComponent(budgetName)}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch expenses');
+          }
+          return response.json();
+        })
+        .then(data => setSelectedBudgetExpenses(data))
+        .catch(err => console.error('Error fetching expenses for budget:', err));
     }
-    setIsDetailsVisible(prevState => !prevState); // Toggle tampilan rincian
+
+    setIsDetailsVisible(prevState => !prevState);
   };
 
-  // Fungsi untuk memformat angka ke format mata uang Indonesia (Rupiah)
-  const formatRupiah = (amount) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
-
-  // Fungsi untuk menghitung persentase pengeluaran dari total anggaran
-  const getBudgetPercentage = (budget) => budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 0;
-
-  // Fungsi untuk menyimpan perubahan nama dan jumlah anggaran yang telah diedit
   const saveEditedBudget = () => {
     if (formState.budgetName && formState.budgetAmount) {
-      const updatedBudgets = budgets.map(budget =>
-        budget.name === formState.selectedBudget
-          ? { ...budget, name: formState.budgetName, amount: parseFloat(formState.budgetAmount) }
-          : budget
-      );
+      const updatedBudget = {
+        ...budgets.find(budget => budget.name === formState.selectedBudget),
+        name: formState.budgetName,
+        amount: parseFloat(formState.budgetAmount)
+      };
 
-      // Update pengeluaran yang terkait dengan nama anggaran yang sudah diubah
-      const updatedExpenses = expenses.map(expense =>
-        expense.budget === formState.selectedBudget
-          ? { ...expense, budget: formState.budgetName }
-          : expense
-      );
-
-      setBudgets(updatedBudgets);
-      setExpenses(updatedExpenses);
-
-      // Update pengeluaran untuk anggaran yang baru saja diubah
-      setSelectedBudgetExpenses(updatedExpenses.filter(expense => expense.budget === formState.budgetName));
-
-      setFormState({ budgetName: '', budgetAmount: '', expenseName: '', expenseAmount: '', selectedBudget: '' }); // Reset form setelah pengeditan
-      saveToLocalStorage();
+      fetch(`http://localhost:3001/api/budgets/${updatedBudget.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedBudget)
+      })
+        .then(response => {
+          if (response.ok) {
+            const updatedBudgets = budgets.map(budget =>
+              budget.id === updatedBudget.id ? updatedBudget : budget
+            );
+            setBudgets(updatedBudgets);
+            setFormState({
+              budgetName: '',
+              budgetAmount: '',
+              expenseName: '',
+              expenseAmount: '',
+              selectedBudget: ''
+            });
+          }
+        })
+        .catch(err => console.error('Error updating budget:', err));
     }
   };
 
-  // Fungsi untuk mengedit anggaran yang dipilih
   const editBudget = (budget) => {
     setFormState({
-      ...formState,
       budgetName: budget.name,
       budgetAmount: budget.amount.toString(),
       selectedBudget: budget.name
     });
+  };
+
+  const formatRupiah = (amount) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
+
+  const getBudgetPercentage = (budget) => {
+    if (!budget || !budget.amount || !budget.spent) return 0;
+    return (budget.spent / budget.amount) * 100;
   };
 
   return (
